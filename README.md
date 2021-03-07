@@ -20,8 +20,12 @@ Please send any bugs / comments / questions to support@k3tzr.net
 
 ##### Credits
 [xLib6000](https://github.com/K3TZR/xLib6000.git)
+
 [SwiftyUserDefaults](https://github.com/sunshinejr/SwiftyUserDefaults.git)
+
 [XCGLogger](https://github.com/DaveWoodCom/XCGLogger.git)
+
+[JWTDecode](https://github.com/auth0/JWTDecode.swift.git)
 
 ##### Other software
 [![DL3LSM](https://img.shields.io/badge/DL3LSM-xDAX,_xCAT,_xKey-informational)](https://dl3lsm.blogspot.com) Mac versions of DAX and/or CAT and a Remote CW Keyer.  
