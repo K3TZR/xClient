@@ -20,10 +20,13 @@ struct RadioPickerBottomView: View {
                 radioManager.pickerSelection = nil
                 presentationMode.wrappedValue.dismiss()
             }
+            .keyboardShortcut(.cancelAction)
+
             Button("Connect") {
                 presentationMode.wrappedValue.dismiss()
             }
             .disabled(radioManager.pickerSelection == nil)
+            .keyboardShortcut(.defaultAction)
         }
     }
 }

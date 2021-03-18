@@ -15,11 +15,16 @@ public struct SmartlinkStatusView: View {
         
     public var body: some View {
         
-        VStack {
-            Text("Smartlink User").font(.title)
+        VStack(spacing: 20) {
+            Text("Smartlink Status").font(.title)
+            if radioManager.delegate.smartlinkEnabled {
+                EmptyView()
+            } else {
+                Text("--- Disabled ---").foregroundColor(.red)
+            }
             Divider()
 
-            Spacer()
+//            Spacer()
             HStack (spacing: 20) {
                 ZStack {
                     Rectangle()
@@ -36,34 +41,38 @@ public struct SmartlinkStatusView: View {
                         .background(Color(.systemBackground))
                     #endif
                 }
-                .frame(width: 120, height: 120)
+                .frame(width: 60, height: 60)
                 .cornerRadius(16)
 
-                VStack (alignment: .leading, spacing: 40) {
+                VStack (alignment: .leading, spacing: 10) {
                     Text("Name").bold()
                     Text("Callsign").bold()
                     Text("Email").bold()
-                }.frame(width: 70, alignment: .leading)
-                
-                VStack (alignment: .leading, spacing: 40) {
+                }
+                .frame(width: 70, alignment: .leading)
+
+                VStack (alignment: .leading, spacing: 10) {
                     Text(radioManager.smartlinkName)
                     Text(radioManager.smartlinkCallsign)
-                    Text(radioManager.delegate.smartlinkAuth0Email ?? "")
-                }.frame(width: 200, alignment: .leading)
+                    Text(radioManager.delegate.smartlinkEmail ?? "")
+                }
+                .frame(width: 200, alignment: .leading)
             }
-            Spacer()
+//            Spacer()
             
             Divider()
-            HStack(spacing: 40) {
+            HStack(spacing: 60) {
                 Button(radioManager.delegate.smartlinkEnabled ? "Disable" : "Enable") {
-                    radioManager.toggleSmartlink()
+                    radioManager.smartlinkEnabledToggle()
                     presentationMode.wrappedValue.dismiss()
                 }
                 Button("Force Login") {
-                    radioManager.forceLogin()
+                    radioManager.smartlinkForceLogin()
                     presentationMode.wrappedValue.dismiss()
                 }
-                Button("Close") { presentationMode.wrappedValue.dismiss() }
+                Button("Close") {
+                    presentationMode.wrappedValue.dismiss()
+                }.keyboardShortcut(.defaultAction)
             }
         }
         .padding()

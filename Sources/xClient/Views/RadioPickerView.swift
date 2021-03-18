@@ -30,8 +30,8 @@ public struct RadioPickerView: View {
             Divider()
             RadioPickerBottomView()
         }
-        .frame(minWidth: 500)
         .padding()
+        .frame(minWidth: 550)
         .onDisappear(perform: {radioManager.connect(to: radioManager.pickerSelection)})
     }
 }

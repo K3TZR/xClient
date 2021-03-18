@@ -11,7 +11,7 @@ import MessageUI
 #endif
 
 struct LoggerBottomView: View {
-    @EnvironmentObject var logger: Logger
+    @EnvironmentObject var logger: LogManager
 
     #if os(macOS)
     var body: some View {
@@ -85,7 +85,7 @@ struct LoggerBottomView: View {
 struct LoggerBottomView_Previews: PreviewProvider {
     static var previews: some View {
         LoggerBottomView()
-            .environmentObject(Logger.sharedInstance)
+            .environmentObject(LogManager.sharedInstance)
     }
 }
 

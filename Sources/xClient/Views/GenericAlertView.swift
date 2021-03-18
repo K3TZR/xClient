@@ -18,28 +18,40 @@ public struct GenericAlertView: View {
         
         let params = radioManager.currentAlert
         
-        VStack (spacing: 20) {
-            Text(params.title).font(.title2)
+        VStack(spacing: 20) {
+            Text(params.title).font(.title)
             
             if params.message == "" {
                 EmptyView()
             } else {
                 Text(params.message)
                     .multilineTextAlignment(.center)
-                    .font(.title3)
+                    .font(.body)
             }
-            
+
             Divider()
-            VStack {
+            VStack(spacing: 10) {
                 ForEach(params.buttons.indices) { i in
                     let button = params.buttons[i]
-                    Button(action: {
-                        button.action()
-                        presentationMode.wrappedValue.dismiss()
-                    }) {
-                        Text(button.text)
-                            .frame(width: 175)
-                            .foregroundColor(button.color == nil ? Color(.controlTextColor) : button.color)
+                    if button.text == "Cancel" {
+                        Button(action: {
+                            button.action()
+                            presentationMode.wrappedValue.dismiss()
+                        }) {
+                            Text(button.text)
+                                .frame(width: 175)
+                                .foregroundColor(button.color == nil ? Color(.controlTextColor) : button.color)
+                        }.keyboardShortcut(.cancelAction)
+
+                    } else {
+                        Button(action: {
+                            button.action()
+                            presentationMode.wrappedValue.dismiss()
+                        }) {
+                            Text(button.text)
+                                .frame(width: 175)
+                                .foregroundColor(button.color == nil ? Color(.controlTextColor) : button.color)
+                        }
                     }
                 }.frame(width: 250)
             }
@@ -47,7 +59,7 @@ public struct GenericAlertView: View {
     }
 }
 
-public struct AlertView_Previews: PreviewProvider {
+public struct GenericAlertView_Previews: PreviewProvider {
     public static var previews: some View {
         GenericAlertView()
             .environmentObject(RadioManager(delegate: MockRadioManagerDelegate()))

@@ -21,7 +21,7 @@ class MockRadioManagerDelegate: RadioManagerDelegate {
     var defaultConnection: String?
     var defaultGuiConnection: String?
     var enableGui             = true
-    var smartlinkAuth0Email: String?
+    var smartlinkEmail: String?
     var smartlinkEnabled      = true
     var smartlinkIsLoggedIn   = true
     var smartlinkUserImage: SmartlinkImage?

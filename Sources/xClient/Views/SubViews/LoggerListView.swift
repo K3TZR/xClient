@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct LoggerListView: View {
-    @EnvironmentObject var logger: Logger
+    @EnvironmentObject var logger: LogManager
     
     var body: some View {
         ScrollView([.horizontal, .vertical]) {
@@ -26,6 +26,6 @@ struct LoggerListView: View {
 struct LoggerListView_Previews: PreviewProvider {
     static var previews: some View {
         LoggerListView()
-            .environmentObject(Logger.sharedInstance)
+            .environmentObject(LogManager.sharedInstance)
     }
 }

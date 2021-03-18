@@ -84,7 +84,7 @@ public struct AlertParams {
 public enum ViewType: Hashable, Identifiable {
     case genericAlert
     case radioPicker
-    case smartlinkAuthorization
+    case smartlinkAuthentication
     case smartlinkStatus
 
     public var id: Int {
@@ -99,7 +99,7 @@ public protocol RadioManagerDelegate {
     var defaultConnection: String?      {get set}
     var defaultGuiConnection: String?   {get set}
     var enableGui: Bool                 {get}
-    var smartlinkAuth0Email: String?    {get set}
+    var smartlinkEmail: String?         {get set}
     var smartlinkEnabled: Bool          {get set}
     var stationName: String             {get set}
 
@@ -107,7 +107,7 @@ public protocol RadioManagerDelegate {
     func willDisconnect()
 }
 
-public final class RadioManager: ObservableObject {
+public final class RadioManager: ObservableObject, WanServerDelegate {
     typealias connectionTuple = (type: String, serialNumber: String, station: String)
     
     // ----------------------------------------------------------------------------
@@ -130,8 +130,6 @@ public final class RadioManager: ObservableObject {
     @Published public var smartlinkIsLoggedIn = false
     @Published public var smartlinkName = ""
     @Published public var smartlinkTestStatus = false
-//    @Published public var stationSelection = 0
-//    @Published public var useLowBw = false
 
     public var currentAlert = AlertParams()
     public var delegate: RadioManagerDelegate!
@@ -140,29 +138,59 @@ public final class RadioManager: ObservableObject {
     public var smartlinkTestResults: String?
     public var wkWebView: WKWebView!
 
+    #if os(macOS)
+    public var infoImage: SmartlinkImage {
+        get { NSImage( systemSymbolName: "info.circle.fill", accessibilityDescription: nil)! }}
+    public var warningImage: SmartlinkImage {
+        get { NSImage( systemSymbolName: "exclamationmark.triangle.fill", accessibilityDescription: nil)! }}
+    public var errorImage: SmartlinkImage {
+        get { NSImage( systemSymbolName: "xmark.octagon", accessibilityDescription: nil)! }}
+    #elseif os(iOS)
+    public var infoImage: SmartlinkImage {
+        get { UIImage( systemName: "info.circle.fill")! }}
+    public var warningImage: SmartlinkImage {
+        get { UIImage( systemName: "exclamationmark.triangle.fill")! }}
+    public var errorImage: SmartlinkImage {
+        get { UIImage( systemName: "xmark.octagon")! }}
+    #endif
+
     // ----------------------------------------------------------------------------
     // MARK: - Internal properties
     
     var auth0UrlString = ""
     var packets: [DiscoveryPacket] { Discovery.sharedInstance.discoveryPackets }
-    var wanManager: WanManager!
-    
+
     // ----------------------------------------------------------------------------
     // MARK: - Private properties
     
-    private var _api = Api.sharedInstance          // initializes the API
+    private var _api = Api.sharedInstance
+    private var _authentication: AuthManager!
     private var _autoBind: Int? = nil
     private let _log = LogProxy.sharedInstance.logMessage
-    
+    private var _wanServer: WanServer?
+
     private let kAvailable = "available"
     private let kInUse = "in_use"
+
+    #if os(macOS)
+    private let kPlatform = "macOS"
+    private var _smartlinkDefaultImage: SmartlinkImage {
+        get { NSImage( systemSymbolName: "person.fill", accessibilityDescription: nil)! }}
+    #elseif os(iOS)
+    private let kPlatform = "iOS"
+    private var _smartlinkDefaultImage: SmartlinkImage {
+        get { UIImage(systemName: "person.fill")! }}
+    #endif
 
     // ----------------------------------------------------------------------------
     // MARK: - Initialization
     
     public init(delegate: RadioManagerDelegate) {
         self.delegate = delegate
-        
+
+        _wanServer = WanServer(delegate: self)
+        _authentication = AuthManager(radioManager: self)
+
         // start Discovery
         let _ = Discovery.sharedInstance
 
@@ -174,7 +202,7 @@ public final class RadioManager: ObservableObject {
         // start listening to notifications
         addNotifications()
 
-        smartlinkImage = getImage()
+        smartlinkImage = _smartlinkDefaultImage
 
         // if non-Gui, is there a saved Client Id?
         if delegate.enableGui == false && delegate.clientId == nil {
@@ -304,17 +332,7 @@ public final class RadioManager: ObservableObject {
             pickerHeading = "Select a \(delegate.enableGui ? "Radio" : "Station") and click Connect"
             DispatchQueue.main.async { [self] in activeView = type }
 
-        case .smartlinkAuthorization:
-            let state = String.random(length: 16)
-            let appName = (Bundle.main.infoDictionary!["CFBundleName"] as! String)
-            auth0UrlString =    """
-                                \(WanManager.kDomain)authorize?client_id=\(WanManager.kClientId)\
-                                &redirect_uri=\(WanManager.kRedirect)\
-                                &response_type=\(WanManager.kResponseType)\
-                                &scope=\(WanManager.kScope)\
-                                &state=\(state)\
-                                &device=\(appName)
-                                """
+        case .smartlinkAuthentication:
             DispatchQueue.main.async { [self] in activeView = type }
 
         case .smartlinkStatus:
@@ -357,55 +375,65 @@ public final class RadioManager: ObservableObject {
         }
     }
 
-    public func toggleSmartlink() {
+    // ----------------------------------------------------------------------------
+    // MARK: - Public methods (Smartlink)
+
+    public func smartlinkEnabledToggle() {
         if delegate.smartlinkEnabled && smartlinkIsLoggedIn { smartlinkLogout() }
         delegate.smartlinkEnabled.toggle()
     }
 
-    public func forceLogin() {
-        delegate.smartlinkAuth0Email = nil
-        wanManager?.previousIdToken = ""
+    public func smartlinkForceLogin() {
+        delegate.smartlinkEmail = nil
+        _authentication.forceNewLogin()
         smartlinkLogout()
     }
     
     public func smartlinkLogin(showPicker: Bool = true) {
-        // instantiate the WanManager
-        if wanManager == nil { wanManager = WanManager(radioManager: self) }
+        if _wanServer == nil { _wanServer = WanServer(delegate: self) }
 
         // attempt a SmartLink login using existing credentials
-        if wanManager!.smartlinkLogin( delegate.smartlinkAuth0Email) {
+        if smartlinkConnect() {
             smartlinkIsLoggedIn = true
             if showPicker { showView(.radioPicker) }
 
         } else {
             // obtain new credentials
-            showView(.smartlinkAuthorization)
+            showView(.smartlinkAuthentication)
         }
     }
-    
-    public func smartlinkLogout() {
-        Discovery.sharedInstance.removeSmartLinkRadios()
-        wanManager?.smartlinkLogout()
-        wanManager = nil
-        smartlinkName = ""
-        smartlinkCallsign = ""
-        smartlinkImage = getImage()
-        smartlinkIsLoggedIn = false
+
+    public func smartlinkAuthenticate(email: String, password: String) {
+        let idToken = _authentication.requestTokens(for: email, pwd: password)
+        // try to connect
+        let appName = (Bundle.main.infoDictionary!["CFBundleName"] as! String)
+
+        if _wanServer == nil { _wanServer = WanServer(delegate: self) }
+
+        if _wanServer!.connect(appName: appName, platform: kPlatform, idToken: idToken) {
+            smartlinkIsLoggedIn = true
+            delegate.smartlinkEmail = email
+            showView(.radioPicker)
+        }
     }
 
-    func getImage() -> SmartlinkImage {
-        #if os(macOS)
-        return NSImage( systemSymbolName: "person.fill", accessibilityDescription: nil)!
-        #elseif os(iOS)
-        return UIImage(systemName: "person.fill")!
-        #endif
+    public func smartlinkLogout() {
+        Discovery.sharedInstance.removeSmartLinkRadios()
+        _wanServer?.disconnect()
+        _wanServer = nil
+        DispatchQueue.main.async { [self] in
+            smartlinkName = ""
+            smartlinkCallsign = ""
+            smartlinkImage = _smartlinkDefaultImage
+            smartlinkIsLoggedIn = false
+        }
     }
 
     /// Called when the Picker's Test button is clicked
     ///
     public func smartlinkTest() {
         guard pickerSelection != nil else { return }
-        wanManager?.sendTestConnection(for: pickerPackets[pickerSelection!].serialNumber)
+        _wanServer?.sendTestConnection(for: pickerPackets[pickerSelection!].serialNumber)
     }
 
     // ----------------------------------------------------------------------------
@@ -429,7 +457,7 @@ public final class RadioManager: ObservableObject {
                 _autoBind = delegate.enableGui ? nil : index
                 
                 if packet.isWan {
-                    wanManager?.validateWanRadio(packet)
+                    _wanServer?.sendConnectMessage(for: packet.serialNumber, holePunchPort: packet.negotiatedHolePunchPort)
                 } else {
                     openRadio(packet)
                 }
@@ -437,17 +465,13 @@ public final class RadioManager: ObservableObject {
         }
     }
 
-    /// Receives the results of a SmartLink test
-    /// - Parameters:
-    ///   - status:     pass / fail
-    ///   - msg:        a summary of the results
+    /// Close the SmartLink connection to a Radio
+    /// - Parameter packet:   the packet of the targeted Radio
     ///
-    func smartlinkTestResults(status: Bool, msg: String) {
-        smartlinkTestResults = msg
-        // set the indicator
-        DispatchQueue.main.async { self.smartlinkTestStatus = status }
+    func closeRadio(_ packet: DiscoveryPacket) {
+        _wanServer?.sendDisconnectMessage(for: packet.serialNumber)
     }
-    
+
     /// Ask the Api to disconnect a specific Client
     /// - Parameters:
     ///   - packet:         a packet describing the Client
@@ -456,11 +480,14 @@ public final class RadioManager: ObservableObject {
     func clientDisconnect(packet: DiscoveryPacket, handle: Handle) {
         _api.requestClientDisconnect( packet: packet, handle: handle)
     }
-    
+
+    // ----------------------------------------------------------------------------
+    // MARK: - Private
+
     /// Determine the state of the Radio being opened and allow the user to choose how to proceed
     /// - Parameter packet:     the packet describing the Radio to be opened
     ///
-    func openRadio(_ packet: DiscoveryPacket) {
+    private func openRadio(_ packet: DiscoveryPacket) {
         guard delegate.enableGui else {
             connectToRadio(packet, isGui: delegate.enableGui, station: delegate.stationName)
             return
@@ -524,17 +551,22 @@ public final class RadioManager: ObservableObject {
             break
         }
     }
-        
-    // ----------------------------------------------------------------------------
-    // MARK: - SmartLinkAuthorizationView actions
 
-    func smartLinkAuthorizationViewCancelButton() {
-//        wkWebView = nil
-        _log("RadioManager, SmartLinkAuthorization cancelled", .debug,  #function, #file, #line)
+    /// Open a connection to the SmartLink server using existing credentials
+    /// - Parameter auth0Email:     saved email (if any)
+    ///
+    private func smartlinkConnect() -> Bool {
+        // is there an Id Token available?
+        if let idToken = _authentication.getExistingIdToken() {
+
+            // try to connect
+            let appName = (Bundle.main.infoDictionary!["CFBundleName"] as! String)
+            return _wanServer!.connect(appName: appName, platform: kPlatform, idToken: idToken)
+        }
+        // NO, user will need to reenter user / pwd to authenticate
+        _log("RadioManager, SmartlinkLogin: Previous ID Token not found", .debug, #function, #file, #line)
+        return false
     }
-
-    // ----------------------------------------------------------------------------
-    // MARK: - Private
 
     /// Given aTuple find a match in PickerPackets
     /// - Parameter conn: a Connection Tuple
@@ -583,15 +615,13 @@ public final class RadioManager: ObservableObject {
     /// Create a subset of DiscoveryPackets for use by the RadioPicker
     /// - Returns:                an array of PickerPacket
     ///
-    public func loadPickerPackets() {
+    private func loadPickerPackets() {
         var newPackets = [PickerPacket]()
         var newStations = [Station]()
-        var i = 0
-        var p = 0
-        
+
         if delegate.enableGui {
             // GUI connection
-            for packet in packets {
+            for (p, packet) in packets.enumerated() {
                 newPackets.append( PickerPacket(id: p,
                                                 packetIndex: p,
                                                 type: packet.isWan ? .wan : .local,
@@ -600,15 +630,13 @@ public final class RadioManager: ObservableObject {
                                                 stations: packet.guiClientStations,
                                                 serialNumber: packet.serialNumber,
                                                 isDefault: packet.connectionString == delegate.defaultGuiConnection))
-                for client in packet.guiClients {
+                for (i, client) in packet.guiClients.enumerated() {
                     if delegate.activePacket?.isWan == packet.isWan {
                         newStations.append( Station(id: i,
                                                     name: client.station,
                                                     clientId: client.clientId) )
-                        i += 1
                     }
                 }
-                p += 1
             }
             
         } else {
@@ -621,8 +649,8 @@ public final class RadioManager: ObservableObject {
             }
             
             // Non-Gui connection
-            for packet in packets {
-                for client in packet.guiClients where client.station != "" {
+            for (p, packet) in packets.enumerated() {
+                for (i, client) in packet.guiClients.enumerated() where client.station != "" {
                     newPackets.append( PickerPacket(id: p,
                                                     packetIndex: p,
                                                     type: packet.isWan ? .wan : .local,
@@ -635,10 +663,8 @@ public final class RadioManager: ObservableObject {
                         newStations.append( Station(id: i,
                                                     name: client.station,
                                                     clientId: client.clientId) )
-                        i += 1
                     }
                 }
-                p += 1
             }
         }
         pickerPackets = newPackets
@@ -727,6 +753,62 @@ public final class RadioManager: ObservableObject {
                 }
             }
         }
+    }
+
+    // ----------------------------------------------------------------------------
+    // MARK: - WanServerDelegate methods
+
+    /// Receives the SmartLink UserName and Callsign from the WanServer
+    /// - Parameters:
+    ///   - name:       the SmartLInk User name
+    ///   - call:       the SmartLink Callsign
+    ///
+    public func wanSettings(name: String, call: String) {
+        DispatchQueue.main.async{ [self] in
+            smartlinkName = name
+            smartlinkCallsign = call
+        }
+    }
+
+    /// Receives the Wan Handle from the WanServer
+    /// - Parameters:
+    ///   - handle:     the Wan handle
+    ///   - serial:     the serial number of the Radio
+    ///
+    public func wanConnectReady(handle: String, serial: String) {
+        for (i, packet) in Discovery.sharedInstance.discoveryPackets.enumerated() where packet.serialNumber == serial && packet.isWan {
+            Discovery.sharedInstance.discoveryPackets[i].wanHandle = handle
+            openRadio(packets[i])
+        }
+    }
+
+    /// Receives the SmartLink test results from the WanServer
+    /// - Parameter results:    the test results
+    ///
+    public func wanTestResults(_ results: WanTestConnectionResults) {
+        // assess the result
+        let status = (results.forwardTcpPortWorking == true &&
+                        results.forwardUdpPortWorking == true &&
+                        results.upnpTcpPortWorking == false &&
+                        results.upnpUdpPortWorking == false &&
+                        results.natSupportsHolePunch  == false) ||
+
+            (results.forwardTcpPortWorking == false &&
+                results.forwardUdpPortWorking == false &&
+                results.upnpTcpPortWorking == true &&
+                results.upnpUdpPortWorking == true &&
+                results.natSupportsHolePunch  == false)
+
+        smartlinkTestResults =
+        """
+        Forward Tcp Port:  \(results.forwardTcpPortWorking)
+        Forward Udp Port:  \(results.forwardUdpPortWorking)
+        UPNP Tcp Port:     \(results.upnpTcpPortWorking)
+        UPNP Udp Port:     \(results.upnpUdpPortWorking)
+        Nat Hole Punch:    \(results.natSupportsHolePunch)
+        """
+        // set the indicator
+        DispatchQueue.main.async { self.smartlinkTestStatus = status }
     }
 }
 

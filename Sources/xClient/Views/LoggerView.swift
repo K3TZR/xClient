@@ -10,7 +10,7 @@ import SwiftUI
 /// A View to display the contents of the app's log
 ///
 public struct LoggerView: View {
-    @EnvironmentObject var logger : Logger
+    @EnvironmentObject var logger : LogManager
     
     public init() {}
     
@@ -46,6 +46,6 @@ public struct LoggerView: View {
 public struct LoggerView_Previews: PreviewProvider {
     public static var previews: some View {
         LoggerView()
-            .environmentObject( Logger.sharedInstance)
+            .environmentObject( LogManager.sharedInstance)
     }
 }

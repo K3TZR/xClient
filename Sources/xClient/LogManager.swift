@@ -13,8 +13,17 @@ import SwiftUI
 
 // ----------------------------------------------------------------------------
 // Logging implementation
-//    Access to this logging functionality should be given to the underlying
-//    App and Library so that their messages will be included in application logs.
+//      Access to this logging functionality should be given to the App and any
+//      underlying Library so that their messages will be included in application logs.
+//
+//      For example, see this usage in xApiMac init()
+//
+//      // initialize and configure the Logger
+//      _log = Logger.sharedInstance.logMessage
+//
+//      // give the Api access to our logger
+//      LogProxy.sharedInstance.delegate = Logger.sharedInstance
+//
 // ----------------------------------------------------------------------------
 
 public protocol LoggerDelegate {
@@ -25,7 +34,7 @@ public protocol LoggerDelegate {
     #endif
 }
 
-public class Logger: LogHandler, ObservableObject {
+public class LogManager: LogHandler, ObservableObject {
     // ----------------------------------------------------------------------------
     // MARK: - Static properties
     
@@ -100,7 +109,7 @@ public class Logger: LogHandler, ObservableObject {
     
     /// Provide access to the Logger singleton
     ///
-    public static var sharedInstance = Logger()
+    public static var sharedInstance = LogManager()
     
     private init() {
         let bundleId = Bundle.main.bundleIdentifier
@@ -147,8 +156,8 @@ public class Logger: LogHandler, ObservableObject {
         fileDestination.showLineNumber          = false
         fileDestination.showLogIdentifier       = false
         fileDestination.showThreadName          = false
-        fileDestination.targetMaxFileSize       = Logger.kMaxFileSize
-        fileDestination.targetMaxLogFiles       = Logger.kMaxLogFiles
+        fileDestination.targetMaxFileSize       = LogManager.kMaxFileSize
+        fileDestination.targetMaxLogFiles       = LogManager.kMaxLogFiles
 
         // Process this destination in the background
         fileDestination.logQueue = XCGLogger.logQueue

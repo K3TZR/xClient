@@ -8,20 +8,20 @@
 import SwiftUI
 
 struct LoggerTopView: View {
-    @EnvironmentObject var logger: Logger
+    @EnvironmentObject var logger: LogManager
     
     var body: some View {
         #if os(macOS)
         HStack {
             Picker("Show Level", selection: $logger.level) {
-                ForEach(Logger.LogLevel.allCases, id: \.self) {
+                ForEach(LogManager.LogLevel.allCases, id: \.self) {
                     Text($0.rawValue)
                 }
             }.frame(width: 175)
 
             Spacer()
             Picker("Filter by", selection: $logger.filterBy) {
-                ForEach(Logger.LogFilter.allCases, id: \.self) {
+                ForEach(LogManager.LogFilter.allCases, id: \.self) {
                     Text($0.rawValue)
                 }
             }.frame(width: 175)
@@ -38,7 +38,7 @@ struct LoggerTopView: View {
         HStack {
             Text("Show Level")
             Picker(logger.level.rawValue, selection: $logger.level) {
-                ForEach(Logger.LogLevel.allCases, id: \.self) {
+                ForEach(LogManager.LogLevel.allCases, id: \.self) {
                     Text($0.rawValue)
                 }
             }.frame(width: 175)
@@ -46,7 +46,7 @@ struct LoggerTopView: View {
             Spacer()
             Text("Filter by")
             Picker(logger.filterBy.rawValue, selection: $logger.filterBy) {
-                ForEach(Logger.LogFilter.allCases, id: \.self) {
+                ForEach(LogManager.LogFilter.allCases, id: \.self) {
                     Text($0.rawValue)
                 }
             }.frame(width: 175)
@@ -67,6 +67,6 @@ struct LoggerTopView: View {
 struct LoggerTopView_Previews: PreviewProvider {
     static var previews: some View {
         LoggerTopView()
-            .environmentObject(Logger.sharedInstance)
+            .environmentObject(LogManager.sharedInstance)
     }
 }

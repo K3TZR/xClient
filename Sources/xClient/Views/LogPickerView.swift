@@ -8,7 +8,7 @@
 import SwiftUI
 
 public struct LogPickerView: View {
-    @EnvironmentObject var logger : Logger
+    @EnvironmentObject var logger : LogManager
     @Environment(\.presentationMode) var presentationMode
 
     @State var selection: Int?
@@ -36,11 +36,15 @@ public struct LogPickerView: View {
             Divider()
             HStack(spacing: 80) {
                 Button("Cancel") {
-                    presentationMode.wrappedValue.dismiss() }
+                    presentationMode.wrappedValue.dismiss()
+                }.keyboardShortcut(.cancelAction)
+
                 Button("Select") {
                     presentationMode.wrappedValue.dismiss()
                     logger.loadFile(at: selection)
-                }.disabled(selection == nil)
+                }
+                .disabled(selection == nil)
+                .keyboardShortcut(.defaultAction)
             }
             .frame(alignment: .leading)
         }
@@ -51,6 +55,6 @@ public struct LogPickerView: View {
 
 struct LogPickerView_Previews: PreviewProvider {
     static var previews: some View {
-        LogPickerView().environmentObject(Logger.sharedInstance)
+        LogPickerView().environmentObject(LogManager.sharedInstance)
     }
 }
