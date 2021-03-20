@@ -17,12 +17,12 @@ class MockRadioManagerDelegate: RadioManagerDelegate {
     // MARK: - Internal properties
     
     var clientId: String?
-    var connectToFirstRadio   = false
+    var connectToFirstRadioIsEnabled   = false
     var defaultConnection: String?
     var defaultGuiConnection: String?
-    var enableGui             = true
+    var guiIsEnabled             = true
     var smartlinkEmail: String?
-    var smartlinkEnabled      = true
+    var smartlinkIsEnabled      = true
     var smartlinkIsLoggedIn   = true
     var smartlinkUserImage: SmartlinkImage?
     var stationName           = "MockStation"

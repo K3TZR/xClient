@@ -78,9 +78,11 @@ final public class AuthManager {
     /// - Parameter userEmail:      saved email (if any)
     /// - Returns:                  an ID Token (if any)
     ///
-    public func getExistingIdToken() -> IdToken {
+    public func getExistingIdToken() -> IdToken? {
         // is there a saved Auth0 token which has not expired?
         if let previousToken = _previousIdToken, isValid(previousToken) {
+            updateClaims(from: previousToken)
+
             // YES, use the saved token
             return previousToken
 
@@ -105,7 +107,7 @@ final public class AuthManager {
     ///   - pwd:        User password
     /// - Returns:      an Id Token (if any)
     ///
-    public func requestTokens(for user: String, pwd: String) -> IdToken {
+    public func requestTokens(for user: String, pwd: String) -> IdToken? {
         // build the request
         var request = URLRequest(url: URL(string: kAuth0Authenticate)!)
         request.httpMethod = kHttpPost
@@ -135,7 +137,7 @@ final public class AuthManager {
     /// - Parameter refreshToken:     a Refresh Token
     /// - Returns:                    an Id Token (if any)
     ///
-    public func requestIdToken(from refreshToken: String) -> IdToken {
+    public func requestIdToken(from refreshToken: String) -> IdToken? {
         // build the request
         var request = URLRequest(url: URL(string: kAuth0Delegation)!)
         request.httpMethod = kHttpPost
@@ -165,7 +167,7 @@ final public class AuthManager {
     /// - Parameter idToken:        the Id Token
     /// - Returns:                  true / false
     ///
-    public func isValid(_ idToken: IdToken) -> Bool {
+    public func isValid(_ idToken: IdToken?) -> Bool {
         if let token = idToken {
             if let jwt = try? decode(jwt: token) {
                 let result = IDTokenValidation(issuer: kDomain, audience: kClientId).validate(jwt)
@@ -260,10 +262,12 @@ final public class AuthManager {
     /// Update the Smartlink picture and email
     /// - Parameter idToken:    the Id Token
     ///
-    private func updateClaims(from idToken: IdToken) {
+    private func updateClaims(from idToken: IdToken?) {
         if let idToken = idToken, let jwt = try? decode(jwt: idToken) {
-            _radioManager.smartlinkImage = getImage(jwt.claim(name: kClaimPicture).string)
-            _radioManager.delegate.smartlinkEmail = jwt.claim(name: kClaimEmail).string
+            DispatchQueue.main.async { [self] in 
+                _radioManager.smartlinkImage = getImage(jwt.claim(name: kClaimPicture).string)
+                _radioManager.delegate.smartlinkEmail = jwt.claim(name: kClaimEmail).string
+            }
         }
     }
 

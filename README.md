@@ -35,6 +35,12 @@ Please send any bugs / comments / questions to support@k3tzr.net
 [![W6OP](https://img.shields.io/badge/W6OP-xVoiceKeyer,_xCW-informational)](https://w6op.com) A Mac-based Voice Keyer and a CW Keyer.  
 
 ---
+##### 1.2.0 Release Notes
+* code cleanup
+* elimination of sub view folder
+* multiple methods renamed
+* verified compilation for both iOS and macOS
+
 ##### 1.1.0 Release Notes
 * rename Logger to LogManager
 * total rewrite of Auth0 authentication (AuthManager)

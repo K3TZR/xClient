@@ -1,5 +1,5 @@
 //
-//  MockLoggerDelegate.swift
+//  MockLogManagerDelegate.swift
 //  xClient
 //
 //  Created by Douglas Adams on 10/23/20.
@@ -8,7 +8,7 @@
 #if os(macOS)
 import AppKit
 
-final class MockLoggerDelegate: LoggerDelegate, ObservableObject {
+final class MockLogManagerDelegate: LogManagerDelegate, ObservableObject {
     // ----------------------------------------------------------------------------
     // MARK: - Published properties
 
@@ -23,10 +23,10 @@ final class MockLoggerDelegate: LoggerDelegate, ObservableObject {
 #elseif os(iOS)
 import SwiftUI
 
-final class MockLoggerDelegate: LoggerDelegate, ObservableObject {
+final class MockLogManagerDelegate: LogManagerDelegate, ObservableObject {
     // ----------------------------------------------------------------------------
     // MARK: - Published properties
 
-    @Published var showLogWindow: Bool = false
+    @Published var logWindowIsOpen: Bool = false
 }
 #endif

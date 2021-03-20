@@ -1,5 +1,5 @@
 //
-//  Logger.swift
+//  LogManager.swift
 //  xClient
 //
 //  Created by Douglas Adams on 3/4/20.
@@ -18,19 +18,19 @@ import SwiftUI
 //
 //      For example, see this usage in xApiMac init()
 //
-//      // initialize and configure the Logger
-//      _log = Logger.sharedInstance.logMessage
+//          // initialize and configure the Logger
+//          _log = Logger.sharedInstance.logMessage
 //
-//      // give the Api access to our logger
-//      LogProxy.sharedInstance.delegate = Logger.sharedInstance
+//          // give the Api access to our logger
+//          LogProxy.sharedInstance.delegate = Logger.sharedInstance
 //
 // ----------------------------------------------------------------------------
 
-public protocol LoggerDelegate {
+public protocol LogManagerDelegate {
     #if os(macOS)
     var logWindow: NSWindow?    {get}
     #elseif os(iOS)
-    var showLogWindow: Bool     {get set}
+    var logWindowIsOpen: Bool     {get set}
     #endif
 }
 
@@ -68,7 +68,7 @@ public class LogManager: LogHandler, ObservableObject {
     }
 
     public var appName      = ""
-    public var delegate: LoggerDelegate!
+    public var delegate: LogManagerDelegate!
     public var domain       = ""
     public var supportEmail = "support@"
 
@@ -81,6 +81,7 @@ public class LogManager: LogHandler, ObservableObject {
     @Published var level: LogLevel      = .debug        { didSet{filterLog() }}
     @Published var loadFailed           = false
     @Published var logLines             = [LogLine]()
+    @Published var selection: Int?
     @Published var showLogPicker        = false
     @Published var showTimestamps       = false         { didSet{filterLog() }}
 

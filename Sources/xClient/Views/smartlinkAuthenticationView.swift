@@ -7,6 +7,9 @@
 
 import SwiftUI
 
+// ----------------------------------------------------------------------------
+// MARK: - Primary view
+
 public struct smartlinkAuthenticationView: View {
     @EnvironmentObject var radioManager : RadioManager
     @Environment(\.presentationMode) var presentationMode
@@ -30,7 +33,9 @@ public struct smartlinkAuthenticationView: View {
 
                 VStack(alignment: .leading, spacing: 40) {
                     TextField("", text: $email)
+                        .modifier(ClearButton(boundText: $email))
                     SecureField("", text: $password)
+                        .modifier(ClearButton(boundText: $password))
                 }
             }
 
@@ -52,6 +57,9 @@ public struct smartlinkAuthenticationView: View {
         .padding()
     }
 }
+
+// ----------------------------------------------------------------------------
+// MARK: - Preview
 
 public struct smartlinkAuthenticationView_Previews: PreviewProvider {
     public static var previews: some View {
