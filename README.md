@@ -35,6 +35,9 @@ Please send any bugs / comments / questions to support@k3tzr.net
 [![W6OP](https://img.shields.io/badge/W6OP-xVoiceKeyer,_xCW-informational)](https://w6op.com) A Mac-based Voice Keyer and a CW Keyer.  
 
 ---
+##### 1.2.1 Release Notes
+* made PickerPackets @Published
+
 ##### 1.2.0 Release Notes
 * code cleanup
 * elimination of sub view folder

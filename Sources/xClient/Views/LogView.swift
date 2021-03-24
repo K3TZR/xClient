@@ -1,5 +1,5 @@
 //
-//  LoggerView.swift
+//  LogView.swift
 //  xClient
 //
 //  Created by Douglas Adams on 10/10/20.
@@ -12,19 +12,21 @@ import MessageUI
 
 /// A View to display the contents of the app's log
 ///
-public struct LoggerView: View {
+public struct LogView: View {
     @EnvironmentObject var logManager : LogManager
-    
+    @EnvironmentObject var radioManager : RadioManager
+    @Environment(\.presentationMode) var presentationMode
+
     public init() {}
 
     public var body: some View {
         
         VStack {
-            LoggerHeaderView()
+            LogHeaderView()
             Divider()
-            LoggerBodyView()
+            LogBodyView()
             Divider()
-            LoggerFooterView()
+            LogFooterView()
         }
         .frame(minWidth: 700)
         .padding(.horizontal)
@@ -35,10 +37,14 @@ public struct LoggerView: View {
         .sheet(isPresented: $logManager.showLogPicker) {
             LogPickerView().environmentObject(logManager)
         }
+        .onAppear(perform: { radioManager.loggerViewIsOpen = true })
+        .onDisappear(perform: {
+            radioManager.loggerViewIsOpen = false
+        })
     }
 }
 
-struct LoggerHeaderView: View {
+struct LogHeaderView: View {
     @EnvironmentObject var logManager: LogManager
 
     var body: some View {
@@ -93,7 +99,7 @@ struct LoggerHeaderView: View {
     }
 }
 
-struct LoggerBodyView: View {
+struct LogBodyView: View {
     @EnvironmentObject var logManager: LogManager
 
     var body: some View {
@@ -109,7 +115,7 @@ struct LoggerBodyView: View {
     }
 }
 
-struct LoggerFooterView: View {
+struct LogFooterView: View {
     @EnvironmentObject var logManager: LogManager
 
     #if os(macOS)
@@ -236,7 +242,8 @@ public struct MailView: UIViewControllerRepresentable {
 
 public struct LoggerView_Previews: PreviewProvider {
     public static var previews: some View {
-        LoggerView()
-            .environmentObject( LogManager.sharedInstance)
+        LogView()
+            .environmentObject(RadioManager(delegate: MockRadioManagerDelegate()))
+            .environmentObject(LogManager.sharedInstance)
     }
 }

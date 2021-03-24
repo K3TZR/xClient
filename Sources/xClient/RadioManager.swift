@@ -122,6 +122,7 @@ public final class RadioManager: ObservableObject, WanServerDelegate {
     @Published public var activeRadio: Radio?
     @Published public var activeView: ViewType?
     @Published public var isConnected = false
+    @Published public var loggerViewIsOpen = false
     @Published public var pickerHeading: String?
     @Published public var pickerMessages = [String]()
     @Published public var pickerSelection: Int?
@@ -132,10 +133,10 @@ public final class RadioManager: ObservableObject, WanServerDelegate {
     @Published public var smartlinkName: String?
     @Published public var smartlinkShowTestResults = false
     @Published public var smartlinkTestStatus = false
-
+    
     public var currentAlert = AlertParams()
     public var delegate: RadioManagerDelegate!
-    public var pickerPackets = [PickerPacket]()
+    @Published public var pickerPackets = [PickerPacket]()
     public var sheetType: ViewType = .radioPicker
     public var smartlinkTestResults: String?
 
