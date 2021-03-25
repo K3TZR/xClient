@@ -37,10 +37,6 @@ public struct LogView: View {
         .sheet(isPresented: $logManager.showLogPicker) {
             LogPickerView().environmentObject(logManager)
         }
-        .onAppear(perform: { radioManager.loggerViewIsOpen = true })
-        .onDisappear(perform: {
-            radioManager.loggerViewIsOpen = false
-        })
     }
 }
 
@@ -179,9 +175,6 @@ struct LogFooterView: View {
                     }
             }
             Button("Clear", action: {logManager.clearLog() })
-
-            Spacer()
-            Button("Back to Main", action: {logManager.backToMain() })
         }
     }
     #endif

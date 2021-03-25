@@ -148,7 +148,7 @@ final public class AuthManager {
         let result = performRequest(request, for: [kKeyIdToken, kKeyRefreshToken])
 
         // validate the Id Token
-        if isValid(result[0]) {
+        if result.count > 0, isValid(result[0]) {
             // save the email & picture
             updateClaims(from: result[0])
             // save the Refresh Token
@@ -298,7 +298,7 @@ final public class AuthManager {
 }
 
 extension URLSession {
-    func synchronousDataTask(with urlRequest: URLRequest) -> (Data?, Error?) {
+    func synchronousDataTask(with urlRequest: URLRequest, timeout: DispatchTimeInterval = .seconds(10)) -> (Data?, Error?) {
         var data: Data?
         var error: Error?
 
@@ -310,7 +310,8 @@ extension URLSession {
             semaphore.signal()
         }
         dataTask.resume()
-        _ = semaphore.wait(timeout: .distantFuture)
+        // timeout the request
+        _ = semaphore.wait(timeout: .now() + timeout)
         return (data, error)
     }
 }

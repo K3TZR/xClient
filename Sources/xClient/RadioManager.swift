@@ -122,9 +122,9 @@ public final class RadioManager: ObservableObject, WanServerDelegate {
     @Published public var activeRadio: Radio?
     @Published public var activeView: ViewType?
     @Published public var isConnected = false
-    @Published public var loggerViewIsOpen = false
     @Published public var pickerHeading: String?
     @Published public var pickerMessages = [String]()
+    @Published public var pickerPackets = [PickerPacket]()
     @Published public var pickerSelection: Int?
     @Published public var showAlert = false
     @Published public var smartlinkCallsign: String?
@@ -136,7 +136,6 @@ public final class RadioManager: ObservableObject, WanServerDelegate {
     
     public var currentAlert = AlertParams()
     public var delegate: RadioManagerDelegate!
-    @Published public var pickerPackets = [PickerPacket]()
     public var sheetType: ViewType = .radioPicker
     public var smartlinkTestResults: String?
 
@@ -633,7 +632,7 @@ public final class RadioManager: ObservableObject, WanServerDelegate {
                 }
             }
         }
-        pickerPackets = newPackets
+        DispatchQueue.main.async { self.pickerPackets = newPackets }
     }
     
     /// Parse the components of a connection string
