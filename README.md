@@ -37,7 +37,7 @@ Please send any bugs / comments / questions to support@k3tzr.net
 ---
 ##### 1.2.3 Release Notes
 * changed UIImage / NSImage to SwiftUI Image
-* changed UIColor / NSCOlor to SwiftUI Color
+* changed UIColor / NSColor to SwiftUI Color
 * corrected default Station name
 
 ##### 1.2.2 Release Notes
