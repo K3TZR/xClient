@@ -13,6 +13,7 @@ import UIKit
 #endif
 import JWTDecode
 import xLib6000
+import SwiftUI
 
 public typealias RefreshToken = String?
 public typealias TokenTuple = (idToken: IdToken, refreshToken: RefreshToken)
@@ -277,22 +278,22 @@ final public class AuthManager {
     /// - Returns:                  the image
     ///
     #if os(macOS)
-    private func getImage(_ claimString: String?) -> NSImage {
+    private func getImage(_ claimString: String?) -> Image {
         if let urlString = claimString, let url = URL(string: urlString) {
-            if let data = try? Data(contentsOf: url), let image = NSImage(data: data) {
-                return image
+            if let data = try? Data(contentsOf: url), let theImage = NSImage(data: data) {
+                return Image(nsImage: theImage)
             }
         }
-        return NSImage( systemSymbolName: kDefaultPicture, accessibilityDescription: nil)!
+        return Image( systemName: kDefaultPicture)
     }
     #elseif os(iOS)
-    private func getImage(_ claimString: String?) -> UIImage {
+    private func getImage(_ claimString: String?) -> Image {
         if let urlString = claimString, let url = URL(string: urlString) {
-            if let data = try? Data(contentsOf: url), let image = UIImage(data: data) {
-                return image
+            if let data = try? Data(contentsOf: url), let theImage = UIImage(data: data) {
+                return Image(uiImage: theImage)
             }
         }
-        return UIImage( systemName: kDefaultPicture)!
+        return Image( systemName: kDefaultPicture)
     }
     #endif
 }

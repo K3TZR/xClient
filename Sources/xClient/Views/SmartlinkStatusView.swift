@@ -66,15 +66,10 @@ struct SmartlinkStatusBody: View {
                 Image(systemName: "person.circle")
                     .font(.system(size: 60))
             } else {
-                #if os(macOS)
-                    Image(nsImage: radioManager.smartlinkImage!)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 60, height: 60)
-                #elseif os(iOS)
-                    Image(uiImage: radioManager.smartlinkImage!)
-                        .frame(width:80, height: 80)
-                #endif
+                radioManager.smartlinkImage!
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 60, height: 60)
             }
             VStack (alignment: .leading, spacing: 10) {
                 Text("Name").bold()

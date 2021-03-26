@@ -11,12 +11,6 @@ import xLib6000
 import WebKit
 import JWTDecode
 
-#if os(macOS)
-public typealias SmartlinkImage = NSImage
-#elseif os(iOS)
-public typealias SmartlinkImage = UIImage
-#endif
-
 public struct PickerPacket : Identifiable, Equatable {
     public var id         = 0
     var packetIndex       = 0
@@ -128,7 +122,7 @@ public final class RadioManager: ObservableObject, WanServerDelegate {
     @Published public var pickerSelection: Int?
     @Published public var showAlert = false
     @Published public var smartlinkCallsign: String?
-    @Published public var smartlinkImage: SmartlinkImage?
+    @Published public var smartlinkImage: Image?
     @Published public var smartlinkIsLoggedIn = false
     @Published public var smartlinkName: String?
     @Published public var smartlinkShowTestResults = false
@@ -159,8 +153,10 @@ public final class RadioManager: ObservableObject, WanServerDelegate {
 
     #if os(macOS)
     private let kPlatform = "macOS"
+    private let kStation = "Mac"
     #elseif os(iOS)
     private let kPlatform = "iOS"
+    private let kStation = "iPad"
     #endif
 
     // ----------------------------------------------------------------------------
@@ -564,7 +560,7 @@ public final class RadioManager: ObservableObject, WanServerDelegate {
     ///
     private func connectToRadio(_ packet: DiscoveryPacket, isGui: Bool = true, pendingDisconnect: Api.PendingDisconnect = .none, station: String = "") {
         // station will be "Mac" if not passed
-        let stationName = (station == "" ? "Mac" : station)
+        let stationName = (station == "" ? kStation : station)
         
         // attempt a connection
         _api.connect(packet,

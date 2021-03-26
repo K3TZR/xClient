@@ -35,6 +35,11 @@ Please send any bugs / comments / questions to support@k3tzr.net
 [![W6OP](https://img.shields.io/badge/W6OP-xVoiceKeyer,_xCW-informational)](https://w6op.com) A Mac-based Voice Keyer and a CW Keyer.  
 
 ---
+##### 1.2.3 Release Notes
+* changed UIImage / NSImage to SwiftUI Image
+* changed UIColor / NSCOlor to SwiftUI Color
+* corrected default Station name
+
 ##### 1.2.2 Release Notes
 * removed LoggerViewIsOpen property
 * put PickerPackets change on main queue
