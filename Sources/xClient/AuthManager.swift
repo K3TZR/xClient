@@ -6,11 +6,6 @@
 //  Copyright © 2021 Auth0. All rights reserved.
 //
 
-#if os(macOS)
-import AppKit
-#elseif os(iOS)
-import UIKit
-#endif
 import JWTDecode
 import xLib6000
 import SwiftUI
@@ -115,22 +110,24 @@ final public class AuthManager {
         request.addValue(kApplicationJson, forHTTPHeaderField: kHttpHeaderField)
 
         // add the body data & perform the request
-        request.httpBody = createTokensBodyData(for: user, pwd: pwd)
-        let result = performRequest(request, for: [kKeyIdToken, kKeyRefreshToken])
+        if let data = createTokensBodyData(for: user, pwd: pwd) {
+            request.httpBody = data
+            let result = performRequest(request, for: [kKeyIdToken, kKeyRefreshToken])
 
-        // validate the Id Token
-        if isValid(result[0]), let refreshToken = result[1] {
-            // save the email & picture
-            updateClaims(from: result[0])
-            // save the Refresh Token
-            if let email = _radioManager.delegate.smartlinkEmail {
-                _ = _tokenStore.set(account: email, data: refreshToken)
+            // validate the Id Token
+            if isValid(result[0]), let refreshToken = result[1] {
+                // save the email & picture
+                updateClaims(from: result[0])
+                // save the Refresh Token
+                if let email = _radioManager.delegate.smartlinkEmail {
+                    _ = _tokenStore.set(account: email, data: refreshToken)
+                }
+                // save Id Token
+                _previousIdToken = result[0]
+                return result[0]
             }
-            // save Id Token
-            _previousIdToken = result[0]
-            return result[0]
         }
-        // invalid Id Token
+        // invalid Id Token or request failure
         return nil
     }
 
@@ -145,22 +142,24 @@ final public class AuthManager {
         request.addValue(kApplicationJson, forHTTPHeaderField: kHttpHeaderField)
 
         // add the body data & perform the request
-        request.httpBody = createRefreshTokenBodyData(for: refreshToken)
-        let result = performRequest(request, for: [kKeyIdToken, kKeyRefreshToken])
+        if let data = createRefreshTokenBodyData(for: refreshToken) {
+            request.httpBody = data
+            let result = performRequest(request, for: [kKeyIdToken, kKeyRefreshToken])
 
-        // validate the Id Token
-        if result.count > 0, isValid(result[0]) {
-            // save the email & picture
-            updateClaims(from: result[0])
-            // save the Refresh Token
-            if let email = _radioManager.delegate.smartlinkEmail {
-                _ = _tokenStore.set(account: email, data: refreshToken)
+            // validate the Id Token
+            if result.count > 0, isValid(result[0]) {
+                // save the email & picture
+                updateClaims(from: result[0])
+                // save the Refresh Token
+                if let email = _radioManager.delegate.smartlinkEmail {
+                    _ = _tokenStore.set(account: email, data: refreshToken)
+                }
+                // save Id Token
+                _previousIdToken = result[0]
+                return result[0]
             }
-            // save Id Token
-            _previousIdToken = result[0]
-            return result[0]
         }
-        // invalid Id Token
+        // invalid Id Token or request failure
         return nil
     }
 
@@ -253,10 +252,7 @@ final public class AuthManager {
     ///
     private func serialize(_ dict: Dictionary<String,String>) -> Data? {
         // try to serialize the data
-        if let data = try? JSONSerialization.data(withJSONObject: dict) {
-            return data
-        }
-        fatalError("Failed to serialize JSON dictionary")
+        return try? JSONSerialization.data(withJSONObject: dict)
     }
 
 

@@ -26,14 +26,6 @@ import SwiftUI
 //
 // ----------------------------------------------------------------------------
 
-public protocol LogManagerDelegate {
-    #if os(macOS)
-    var logWindow: NSWindow?    {get}
-    #elseif os(iOS)
-    var logWindowIsOpen: Bool     {get set}
-    #endif
-}
-
 public class LogManager: LogHandler, ObservableObject {
     // ----------------------------------------------------------------------------
     // MARK: - Static properties
@@ -68,7 +60,6 @@ public class LogManager: LogHandler, ObservableObject {
     }
 
     public var appName      = ""
-    public var delegate: LogManagerDelegate!
     public var domain       = ""
     public var supportEmail = "support@"
 
@@ -118,7 +109,7 @@ public class LogManager: LogHandler, ObservableObject {
         if let p = parts, p.count == 3 {
             domain = String(p[0] + "." + p[1])
             appName = String(p[2])
-            supportEmail += domain
+            supportEmail += (p[1] + "." + p[0])
         }
         _objectQ = DispatchQueue(label: appName + ".Logger.objectQ", attributes: [.concurrent])
         _log = XCGLogger(identifier: appName, includeDefaultDestinations: false)
@@ -144,38 +135,50 @@ public class LogManager: LogHandler, ObservableObject {
         log.add(destination: systemDestination)
         #endif
         
-        // Create a file log destination
-        let logs = URL.createLogFolder(domain: domain, appName: appName)
-        let fileDestination = AutoRotatingFileDestination(writeToFile: logs.appendingPathComponent(defaultLogName), identifier: appName + ".autoRotatingFileDestination")
-        
-        // Optionally set some configuration options
-        fileDestination.outputLevel             = _logLevel
-        fileDestination.showDate                = true
-        fileDestination.showFileName            = false
-        fileDestination.showFunctionName        = false
-        fileDestination.showLevel               = true
-        fileDestination.showLineNumber          = false
-        fileDestination.showLogIdentifier       = false
-        fileDestination.showThreadName          = false
-        fileDestination.targetMaxFileSize       = LogManager.kMaxFileSize
-        fileDestination.targetMaxLogFiles       = LogManager.kMaxLogFiles
+        // Get / Create a file log destination
+        if let logs = URL.createLogFolder(domain: domain, appName: appName) {
+            let fileDestination = AutoRotatingFileDestination(writeToFile: logs.appendingPathComponent(defaultLogName), identifier: appName + ".autoRotatingFileDestination")
 
-        // Process this destination in the background
-        fileDestination.logQueue = XCGLogger.logQueue
-        
-        // Add the destination to the logger
-        log.add(destination: fileDestination)
-        
-        // Add basic app info, version info etc, to the start of the logs
-        log.logAppDetails()
-        
-        // format the date (only effects the file logging)
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyy-MM-dd HH:mm:ss:SSS"
-        dateFormatter.locale = Locale.current
-        log.dateFormatter = dateFormatter
+            // Optionally set some configuration options
+            fileDestination.outputLevel             = _logLevel
+            fileDestination.showDate                = true
+            fileDestination.showFileName            = false
+            fileDestination.showFunctionName        = false
+            fileDestination.showLevel               = true
+            fileDestination.showLineNumber          = false
+            fileDestination.showLogIdentifier       = false
+            fileDestination.showThreadName          = false
+            fileDestination.targetMaxFileSize       = LogManager.kMaxFileSize
+            fileDestination.targetMaxLogFiles       = LogManager.kMaxLogFiles
 
-        _defaultLogUrl = URL(fileURLWithPath: _defaultFolder + "/" + defaultLogName)
+            // Process this destination in the background
+            fileDestination.logQueue = XCGLogger.logQueue
+
+            // Add the destination to the logger
+            log.add(destination: fileDestination)
+
+            // Add basic app info, version info etc, to the start of the logs
+            log.logAppDetails()
+
+            // format the date (only effects the file logging)
+            let dateFormatter = DateFormatter()
+            dateFormatter.dateFormat = "yyyy-MM-dd HH:mm:ss:SSS"
+            dateFormatter.locale = Locale.current
+            log.dateFormatter = dateFormatter
+
+            _defaultLogUrl = URL(fileURLWithPath: _defaultFolder + "/" + defaultLogName)
+        } else {
+            #if os(macOS)
+            let alert = NSAlert()
+            alert.messageText = "Logging failure"
+            alert.informativeText = "unable to find / create Log folder"
+            alert.alertStyle = .critical
+            alert.addButton(withTitle: "Ok")
+
+            alert.runModal()
+            #endif
+            fatalError("Logging failure:, unable to find / create Log folder")
+        }
     }
     
     // ----------------------------------------------------------------------------
@@ -289,7 +292,7 @@ public class LogManager: LogHandler, ObservableObject {
                         alert.alertStyle = .critical
                         alert.addButton(withTitle: "Ok")
 
-                        alert.beginSheetModal(for: NSApplication.shared.mainWindow!) { _ in }
+                        alert.runModal()
                     }
                 }
             }
@@ -334,4 +337,37 @@ public class LogManager: LogHandler, ObservableObject {
             logLines.append( LogLine(id: i, text: showTimestamps ? String(line) : String(line[offset...]) ))
         }
     }
+}
+
+// ----------------------------------------------------------------------------
+// MARK: - Extensions
+
+extension URL {
+    /// setup the Support folders
+    ///
+    static var appSupport: URL { return FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first! }
+
+    static func createLogFolder(domain: String, appName: String) -> URL? {
+        return createAsNeeded(domain + "." + appName + "/Logs")
+    }
+
+    static func createAsNeeded(_ folder: String) -> URL? {
+        let fileManager = FileManager.default
+        let folderUrl = appSupport.appendingPathComponent( folder )
+
+        // does the folder exist?
+        if fileManager.fileExists( atPath: folderUrl.path ) == false {
+            // NO, create it
+            do {
+                try fileManager.createDirectory( at: folderUrl, withIntermediateDirectories: true, attributes: nil)
+            } catch {
+                return nil
+            }
+        }
+        return folderUrl
+    }
+}
+
+extension String {
+    var expandingTilde: String { NSString(string: self).expandingTildeInPath }
 }

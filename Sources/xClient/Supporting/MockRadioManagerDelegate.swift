@@ -14,7 +14,7 @@ class MockRadioManagerDelegate: RadioManagerDelegate {
     
     var clientId: String?
     var connectToFirstRadioIsEnabled = false
-    var defaultConnection: String?
+    var defaultNonGuiConnection: String?
     var defaultGuiConnection: String?
     var guiIsEnabled = true
     var smartlinkEmail: String?

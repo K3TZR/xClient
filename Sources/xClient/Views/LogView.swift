@@ -98,12 +98,27 @@ struct LogHeaderView: View {
 struct LogBodyView: View {
     @EnvironmentObject var logManager: LogManager
 
+    func lineColor(_ text: String) -> Color {
+        if text.contains("[Debug]") {
+            return .gray
+        } else if  text.contains("[Info]") {
+            return .primary
+        } else if  text.contains("[Warning]") {
+            return .orange
+        } else if  text.contains("[Error]") {
+            return .red
+        } else {
+            return .primary
+        }
+    }
+
     var body: some View {
         ScrollView([.horizontal, .vertical]) {
             VStack(alignment: .leading) {
                 ForEach(logManager.logLines) { line in
                     Text(line.text)
                         .font(.system(size: CGFloat(logManager.fontSize), weight: .regular, design: .monospaced))
+                        .foregroundColor(lineColor(line.text))
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)

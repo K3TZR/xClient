@@ -90,8 +90,7 @@ public enum ViewType: Hashable, Identifiable {
 public protocol RadioManagerDelegate {
     var activePacket: DiscoveryPacket?      {get set}
     var clientId: String?                   {get set}
-    var connectToFirstRadioIsEnabled: Bool  {get set}
-    var defaultConnection: String?          {get set}
+    var defaultNonGuiConnection: String?    {get set}
     var defaultGuiConnection: String?       {get set}
     var guiIsEnabled: Bool                  {get}
     var smartlinkEmail: String?             {get set}
@@ -202,9 +201,9 @@ public final class RadioManager: ObservableObject, WanServerDelegate {
         if delegate.guiIsEnabled && delegate.defaultGuiConnection != nil {
             _log("RadioManager, connecting to Gui default: \(delegate.defaultGuiConnection!)", .info,  #function, #file, #line)
             connectRadio(using: delegate.defaultGuiConnection!)
-        } else if delegate.guiIsEnabled == false && delegate.defaultConnection != nil {
-            _log("RadioManager, connecting to non-Gui default: \(delegate.defaultConnection!)", .info,  #function, #file, #line)
-            connectRadio(using: delegate.defaultConnection!)
+        } else if delegate.guiIsEnabled == false && delegate.defaultNonGuiConnection != nil {
+            _log("RadioManager, connecting to non-Gui default: \(delegate.defaultNonGuiConnection!)", .info,  #function, #file, #line)
+            connectRadio(using: delegate.defaultNonGuiConnection!)
         } else {
             showView(.radioPicker)
         }
@@ -299,16 +298,16 @@ public final class RadioManager: ObservableObject, WanServerDelegate {
     /// Show the Default Picker sheet
     ///
     public func defaultChoose() {
-        loadPickerPackets()
+        let packets = getPickerPackets()
         var buttons = [AlertButton]()
-        for packet in pickerPackets {
-            let listLine = packet.nickname + " - " + packet.type.rawValue + (delegate.guiIsEnabled == false ? " - " + packet.stations : "")
+        for packet in packets {
+            let listLine = packet.nickname + " - " + packet.type.rawValue + (delegate.guiIsEnabled ? "" : " - " + packet.stations)
             buttons.append(AlertButton(listLine, { self.defaultSet(packet) }, color: packet.isDefault ? .red : nil))
         }
-        buttons.append(AlertButton( "Clear", { self.defaultSet(nil) }))
+        buttons.append(AlertButton( "Clear", { self.defaultClear() }))
         buttons.append(AlertButton( "Cancel", {}))
         currentAlert = AlertParams(title: "Select a \(delegate.guiIsEnabled ? "Radio" : "Station")",
-                                   message: pickerPackets.count == 0 ? "No \(delegate.guiIsEnabled ? "Radios" : "Stations") found" : "current default shown in red",
+                                   message: pickerPackets.count == 0 ? "No \(delegate.guiIsEnabled ? "Radios" : "Stations") found" : "current default shown in red (if any)",
                                    symbolName: pickerPackets.count == 0 ? "exclamationmark.triangle" : "info.circle",
                                    buttons: buttons)
         showView(.genericAlert)
@@ -318,7 +317,7 @@ public final class RadioManager: ObservableObject, WanServerDelegate {
         if delegate.guiIsEnabled {
             delegate.defaultGuiConnection = nil
         } else {
-            delegate.defaultConnection = nil
+            delegate.defaultNonGuiConnection = nil
         }
     }
        
@@ -326,9 +325,10 @@ public final class RadioManager: ObservableObject, WanServerDelegate {
         switch (packet, delegate.guiIsEnabled) {
         
         case (nil, true):   delegate.defaultGuiConnection = nil
-        case (nil, false):  delegate.defaultConnection = nil
+
+        case (nil, false):  delegate.defaultNonGuiConnection = nil
         case (_, true):     delegate.defaultGuiConnection = packet!.connectionString
-        case (_, false):    delegate.defaultConnection = packet!.connectionString + "." + packet!.stations
+        case (_, false):    delegate.defaultNonGuiConnection = packet!.connectionString + "." + packet!.stations
         }
     }
 
@@ -572,17 +572,34 @@ public final class RadioManager: ObservableObject, WanServerDelegate {
                      logState: .none,
                      pendingDisconnect : pendingDisconnect)
     }
-    
-    /// Create a subset of DiscoveryPackets for use by the RadioPicker
+
+    func loadPickerPackets() {
+        DispatchQueue.main.async { [self] in pickerPackets = getPickerPackets() }
+    }
+
+    /// Create a subset of DiscoveryPackets
     /// - Returns:                an array of PickerPacket
     ///
-    private func loadPickerPackets() {
+    private func getPickerPackets() -> [PickerPacket] {
         var newPackets = [PickerPacket]()
-        var newStations = [Station]()
 
+        func isGuiDefault(_ packet: DiscoveryPacket) -> Bool {
+            if let value = delegate.defaultGuiConnection {
+                return value == packet.connectionString
+            }
+            return false
+        }
+
+        func isNonGuiDefault(_ packet: DiscoveryPacket, _ client: GuiClient) -> Bool {
+            if let value = delegate.defaultNonGuiConnection {
+                return value == packet.connectionString + "." + client.station
+            }
+            return false
+        }
+        var p = 0
         if delegate.guiIsEnabled {
             // GUI connection
-            for (p, packet) in packets.enumerated() {
+            packets.forEach{ packet in
                 newPackets.append( PickerPacket(id: p,
                                                 packetIndex: p,
                                                 type: packet.isWan ? .wan : .local,
@@ -590,45 +607,29 @@ public final class RadioManager: ObservableObject, WanServerDelegate {
                                                 status: ConnectionStatus(rawValue: packet.status.lowercased()) ?? .inUse,
                                                 stations: packet.guiClientStations,
                                                 serialNumber: packet.serialNumber,
-                                                isDefault: packet.connectionString == delegate.defaultGuiConnection))
-                for (i, client) in packet.guiClients.enumerated() {
-                    if delegate.activePacket?.isWan == packet.isWan {
-                        newStations.append( Station(id: i,
-                                                    name: client.station,
-                                                    clientId: client.clientId) )
-                    }
-                }
+                                                isDefault: isGuiDefault(packet)))
+                p += 1
             }
-            
+
         } else {
-            
-            func findStation(_ name: String) -> Bool {
-                for station in newStations where station.name == name {
-                    return true
-                }
-                return false
-            }
-            
             // Non-Gui connection
-            for (p, packet) in packets.enumerated() {
-                for (i, client) in packet.guiClients.enumerated() where client.station != "" {
-                    newPackets.append( PickerPacket(id: p,
+            var i = 0
+            packets.forEach{ packet in
+                packet.guiClients.forEach { guiClient in
+                    newPackets.append( PickerPacket(id: i,
                                                     packetIndex: p,
                                                     type: packet.isWan ? .wan : .local,
                                                     nickname: packet.nickname,
                                                     status: ConnectionStatus(rawValue: packet.status.lowercased()) ?? .inUse,
-                                                    stations: client.station,
+                                                    stations: guiClient.station,
                                                     serialNumber: packet.serialNumber,
-                                                    isDefault: packet.connectionString + "." + client.station == delegate.defaultConnection))
-                    if findStation(client.station) == false  {
-                        newStations.append( Station(id: i,
-                                                    name: client.station,
-                                                    clientId: client.clientId) )
-                    }
+                                                    isDefault: isNonGuiDefault(packet, guiClient)))
+                    i += 1
                 }
+                p += 1
             }
         }
-        DispatchQueue.main.async { self.pickerPackets = newPackets }
+        return newPackets
     }
     
     /// Parse the components of a connection string
