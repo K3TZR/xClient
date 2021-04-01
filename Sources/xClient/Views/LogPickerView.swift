@@ -26,7 +26,7 @@ public struct LogPickerView: View {
             LogPickerFooterView()
         }
         .frame(minHeight: 300)
-        .padding(.bottom)
+        .padding()
     }
 }
 
@@ -36,7 +36,7 @@ public struct LogPickerView: View {
 struct LogPickerHeaderView: View {
 
     var body: some View {
-        Text("Choose a log file").font(.title)
+        Text("Select a log file").font(.title)
     }
 }
 

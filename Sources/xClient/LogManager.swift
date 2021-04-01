@@ -30,8 +30,8 @@ public class LogManager: LogHandler, ObservableObject {
     // ----------------------------------------------------------------------------
     // MARK: - Static properties
     
-    static let kMaxLogFiles: UInt8  = 5
-    static let kMaxFileSize: UInt64 = 20_000_000
+    static let kMaxLogFiles: UInt8  = 10
+    static let kMaxTime: TimeInterval = 60 * 60 // 1 Hour
     
     // ----------------------------------------------------------------------------
     // MARK: - Public properties
@@ -137,7 +137,7 @@ public class LogManager: LogHandler, ObservableObject {
         
         // Get / Create a file log destination
         if let logs = URL.createLogFolder(domain: domain, appName: appName) {
-            let fileDestination = AutoRotatingFileDestination(writeToFile: logs.appendingPathComponent(defaultLogName), identifier: appName + ".autoRotatingFileDestination")
+            let fileDestination = AutoRotatingFileDestination(writeToFile: logs.appendingPathComponent(defaultLogName), identifier: appName + ".autoRotatingFileDestination", shouldAppend: true)
 
             // Optionally set some configuration options
             fileDestination.outputLevel             = _logLevel
@@ -148,8 +148,8 @@ public class LogManager: LogHandler, ObservableObject {
             fileDestination.showLineNumber          = false
             fileDestination.showLogIdentifier       = false
             fileDestination.showThreadName          = false
-            fileDestination.targetMaxFileSize       = LogManager.kMaxFileSize
             fileDestination.targetMaxLogFiles       = LogManager.kMaxLogFiles
+            fileDestination.targetMaxTimeInterval   = LogManager.kMaxTime
 
             // Process this destination in the background
             fileDestination.logQueue = XCGLogger.logQueue
@@ -324,7 +324,7 @@ public class LogManager: LogHandler, ObservableObject {
         case .warning:   filteredLines = _linesArray.filter { $0.contains(" [" + LogLevel.error.rawValue + "] ") || $0.contains(" [" + LogLevel.warning.rawValue + "] ") }
         case .error:     filteredLines = _linesArray.filter { $0.contains(" [" + LogLevel.error.rawValue + "] ") }
         }
-        
+
         switch filterBy {
 
         case .none:      limitedLines = filteredLines
