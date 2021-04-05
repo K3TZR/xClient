@@ -136,8 +136,11 @@ public class LogManager: LogHandler, ObservableObject {
         #endif
         
         // Get / Create a file log destination
-        if let logs = URL.createLogFolder(domain: domain, appName: appName) {
-            let fileDestination = AutoRotatingFileDestination(writeToFile: logs.appendingPathComponent(defaultLogName), identifier: appName + ".autoRotatingFileDestination", shouldAppend: true)
+        if let logs = URL.logs {
+            let fileDestination = AutoRotatingFileDestination(writeToFile: logs.appendingPathComponent(defaultLogName),
+                                                              identifier: appName + ".autoRotatingFileDestination",
+                                                              shouldAppend: true,
+                                                              appendMarker: "- - - - - App was restarted - - - - -")
 
             // Optionally set some configuration options
             fileDestination.outputLevel             = _logLevel
@@ -342,32 +345,58 @@ public class LogManager: LogHandler, ObservableObject {
 // ----------------------------------------------------------------------------
 // MARK: - Extensions
 
-extension URL {
-    /// setup the Support folders
-    ///
-    static var appSupport: URL { return FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first! }
-
-    static func createLogFolder(domain: String, appName: String) -> URL? {
-        return createAsNeeded(domain + "." + appName + "/Logs")
-    }
-
-    static func createAsNeeded(_ folder: String) -> URL? {
-        let fileManager = FileManager.default
-        let folderUrl = appSupport.appendingPathComponent( folder )
-
-        // does the folder exist?
-        if fileManager.fileExists( atPath: folderUrl.path ) == false {
-            // NO, create it
-            do {
-                try fileManager.createDirectory( at: folderUrl, withIntermediateDirectories: true, attributes: nil)
-            } catch {
-                return nil
-            }
-        }
-        return folderUrl
-    }
-}
+//extension URL {
+//    /// setup the Support folders
+//    ///
+//    static var appSupport: URL { return FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first! }
+//
+//    static func createLogFolder(domain: String, appName: String) -> URL? {
+//        return createAsNeeded(domain + "." + appName + "/Logs")
+//    }
+//
+//    static func createAsNeeded(_ folder: String) -> URL? {
+//        let fileManager = FileManager.default
+//        let folderUrl = appSupport.appendingPathComponent( folder )
+//
+//        // does the folder exist?
+//        if fileManager.fileExists( atPath: folderUrl.path ) == false {
+//            // NO, create it
+//            do {
+//                try fileManager.createDirectory( at: folderUrl, withIntermediateDirectories: true, attributes: nil)
+//            } catch {
+//                return nil
+//            }
+//        }
+//        return folderUrl
+//    }
+//}
 
 extension String {
     var expandingTilde: String { NSString(string: self).expandingTildeInPath }
+}
+
+extension URL {
+
+  /// setup the Support folders
+  ///
+  static var appSupport : URL { return FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first! }
+  static var logs : URL? { return createAsNeeded("net.k3tzr.xApiMac/Logs") }
+  static var macros : URL? { return createAsNeeded("net.k3tzr.xApiMac/Macros") }
+
+  static func createAsNeeded(_ folder: String) -> URL? {
+    let fileManager = FileManager.default
+    let folderUrl = appSupport.appendingPathComponent( folder )
+
+    // does the folder exist?
+    if fileManager.fileExists( atPath: folderUrl.path ) == false {
+
+      // NO, create it
+      do {
+        try fileManager.createDirectory( at: folderUrl, withIntermediateDirectories: true, attributes: nil)
+      } catch {
+        return nil
+      }
+    }
+    return folderUrl
+  }
 }

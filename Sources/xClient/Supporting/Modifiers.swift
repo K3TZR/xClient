@@ -9,13 +9,15 @@ import SwiftUI
 
 public struct ClearButton: ViewModifier {
     var text: Binding<String>
+    var trailing: Bool
 
-    public init(boundText: Binding<String>) {
+    public init(boundText: Binding<String>, trailing: Bool = true) {
         self.text = boundText
+        self.trailing = trailing
     }
 
     public func body(content: Content) -> some View {
-        ZStack(alignment: .trailing) {
+        ZStack(alignment: trailing ? .trailing : .leading) {
             content
 
             if !text.wrappedValue.isEmpty {
